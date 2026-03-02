@@ -15,6 +15,17 @@ project/
 ├── frontend/ # React frontend
 └── README.md
 ```
+## Diagrams
+Here are some diagrams explaining the project:
+
+### High Level Architecture
+verview of how the frontend, backend, and database interact.
+![Diagram 1](assets/high-level-architecture.png)
+
+### Seqeunce Diagram
+Step-by-step flow of a CSV query from user input to chart visualization.
+![Diagram 2](assets/sequence-diagram.png)
+
 ## Getting Started
 
 ### Backend
