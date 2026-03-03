@@ -2,7 +2,7 @@ import plotly.express as px
 import pandas as pd
 
 def generate_chart(df: pd.DataFrame) -> str:
-    if df.columns < 2:
+    if len(df.columns) < 2:
         return "<p>Not enough columns to generate a chart.</p>"
 
     # For simplicity, we'll just plot the first two columns.
@@ -13,4 +13,3 @@ def generate_chart(df: pd.DataFrame) -> str:
 
     # full_html=False means it only returns the HTML for the chart itself, not a complete HTML document with <html>, <head>, etc.
     return fig.to_html(full_html=False)
-
