@@ -16,5 +16,5 @@ class Database:
         return: You now have a standard Pandas object that you can use for .head(), .plot(), or further Python analysis.
         '''
         return self.conn.execute(sql).fetchdf()
-    
-    db = Database()
+
+db = Database()
