@@ -41,7 +41,7 @@ async def query_data(nl_query: str = Query(...)):
 
         return {
             "sql": sql,
-            "data_preview": dataframe_to_json_records(df, 50),
+            "result": dataframe_to_json_records(df, 50),
             "insights": insights,
             "chart_html": chart_html
         }
