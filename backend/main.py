@@ -1,7 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, Query
 from fastapi.responses import JSONResponse
 
-from .db import db
+from .db import db # When Python imports a module (here db.py), it runs the top-level code (db = Database()) of that module once.
 from .sql_validator import validate_sql
 from .logger_config import logger 
 from .llm import generate_sql, generate_insights
@@ -34,6 +34,7 @@ async def query_data(nl_query: str = Query(...)):
 
     validate_sql(sql)
 
+    # At this point I have the result not the raw table the user uploaded at the start
     try:
         df = db.query(sql) # df contains the results of the SQL query as a pandas DataFrame
 

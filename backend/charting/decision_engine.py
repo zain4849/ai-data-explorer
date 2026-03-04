@@ -3,7 +3,7 @@ from typing import Dict
 
 
 """
-Given a df:
+Given a df (After NL query -> SQL query result):
 
 df = pd.DataFrame({
     "name": ["Alice", "Bob", "Charlie"],
