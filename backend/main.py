@@ -2,6 +2,8 @@ from fastapi import FastAPI, UploadFile, File, Query
 from fastapi.responses import JSONResponse
 
 from .db import db
+from .sql_validator import validate_sql
+from .logger_config import logger 
 from .llm import generate_sql, generate_insights
 from .charting import generate_chart
 
@@ -23,8 +25,13 @@ async def upload_csv(file: UploadFile = File(...)):
 
 @app.get("/query/")
 async def query_data(nl_query: str = Query(...)):
+
     # http://localhost:8000/query?nl_query=top%2010%20customers
     sql = generate_sql(nl_query)
+
+    logger.info(f"Generated SQL: {sql}")
+
+    validate_sql(sql)
 
     try:
         df = db.query(sql) # df contains the results of the SQL query as a pandas DataFrame
