@@ -24,10 +24,13 @@ def clean_sql_output(raw_sql: str) -> str:
     sql = re.sub(r"\s*```$", "", sql)
     return sql.strip()
 
-def generate_sql(nl_query: str) -> str:
+def generate_sql(nl_query: str, schema_cols: list[str]) -> str:
+    columns_text = ", ".join(schema_cols)
+
     prompt = f"""
     You convert natural language into DuckDB SQL queries.
     The table name is 'data'.
+    Available columns: {columns_text}
 
     Rules:
     - Only output valid SQL.

@@ -17,4 +17,11 @@ class Database:
         '''
         return self.conn.execute(sql).fetchdf()
 
+    def get_schema(self):
+        result = self.conn.execute("PRAGMA table_info(data)").fetchall()
+        # result = [(0, 'id', 'INTEGER', 0, None, 1), (1, 'username', 'TEXT', 1, None, 0), (2, 'age', 'INTEGER', 0, 18, 0)]
+        columns = [row[1] for row in result]
+        # columns = ['id', 'username', 'age']
+        return columns
+
 db = Database()

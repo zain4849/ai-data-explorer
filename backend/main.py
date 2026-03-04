@@ -25,9 +25,10 @@ async def upload_csv(file: UploadFile = File(...)):
 
 @app.get("/query/")
 async def query_data(nl_query: str = Query(...)):
-
     # http://localhost:8000/query?nl_query=top%2010%20customers
-    sql = generate_sql(nl_query)
+
+    schema = db.get_schema()
+    sql = generate_sql(nl_query, schema)
 
     logger.info(f"Generated SQL: {sql}")
 
