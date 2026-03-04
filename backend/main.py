@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, Query
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from .db import db # When Python imports a module (here db.py), it runs the top-level code (db = Database()) of that module once.
 from .sql_validator import validate_sql
@@ -10,6 +11,19 @@ from .charting.charting import generate_chart
 import pandas as pd
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:5173",
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # Convert to object dtype first so None can replace NaN in numeric columns.
