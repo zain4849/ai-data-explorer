@@ -5,7 +5,7 @@ from .db import db
 from .sql_validator import validate_sql
 from .logger_config import logger 
 from .llm import generate_sql, generate_insights
-from .charting import generate_chart
+from .charting.charting import generate_chart
 
 import pandas as pd
 
