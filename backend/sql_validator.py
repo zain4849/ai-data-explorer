@@ -1,5 +1,8 @@
 import re
 
+from .config import settings
+
+
 FORBIDDEN_KEYWORDS = [
     "drop",
     "delete",
@@ -23,6 +26,7 @@ FORBIDDEN_PATTERNS = [
     r"\?\?\?",
 ]
 
+
 def validate_sql(sql: str) -> bool:
     sql_lower = sql.strip().lower()
 
@@ -40,3 +44,21 @@ def validate_sql(sql: str) -> bool:
             raise ValueError("Unresolved placeholder token detected in SQL.")
 
     return True
+
+
+def ensure_limit(sql: str, default_limit: int | None = None) -> str:
+    """
+    Ensure the SQL query has a LIMIT clause.
+
+    If a LIMIT already exists, the SQL is returned unchanged.
+    """
+    if default_limit is None:
+        default_limit = settings.default_query_limit
+
+    sql_stripped = sql.strip()
+    sql_lower = sql_stripped.lower()
+
+    if " limit " in sql_lower or sql_lower.endswith(" limit"):
+        return sql_stripped
+
+    return f"{sql_stripped} LIMIT {default_limit}"

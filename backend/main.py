@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from .db import db  # When Python imports a module (here db.py), it runs the top-level code (db = Database()) of that module once.
-from .sql_validator import validate_sql
+from .sql_validator import validate_sql, ensure_limit
 from .logger_config import logger
 from .llm import LLMError, generate_sql, generate_insights, repair_sql
 from .charting.charting import generate_chart
@@ -113,6 +113,7 @@ def query_data(nl_query: str = Query(...)):
         sql = generate_sql(nl_query, schema)
         logger.info("Generated SQL: %s", sql)
         validate_sql(sql)
+        sql = ensure_limit(sql)
         df = db.query(sql)  # df contains the results of the SQL query as a pandas DataFrame
     except LLMError as llm_error:
         logger.error("LLM error during SQL generation: %s", llm_error)
@@ -137,6 +138,7 @@ def query_data(nl_query: str = Query(...)):
             repaired_sql = repair_sql(nl_query, schema, sql, first_error_text)
             logger.info("Repaired SQL: %s", repaired_sql)
             validate_sql(repaired_sql)
+            repaired_sql = ensure_limit(repaired_sql)
             df = db.query(repaired_sql)
             sql = repaired_sql
         except Exception as second_error:
