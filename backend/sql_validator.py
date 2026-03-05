@@ -1,3 +1,5 @@
+import re
+
 FORBIDDEN_KEYWORDS = [
     "drop",
     "delete",
@@ -14,6 +16,13 @@ ALLOWED_KEYWORDS = [
     "with",
 ]
 
+FORBIDDEN_PATTERNS = [
+    r"\[[^\]]+\]",
+    r"<[^>]+>",
+    r"\bTODO\b",
+    r"\?\?\?",
+]
+
 def validate_sql(sql: str) -> bool:
     sql_lower = sql.strip().lower()
 
@@ -25,5 +34,9 @@ def validate_sql(sql: str) -> bool:
     for keyword in FORBIDDEN_KEYWORDS:
         if keyword in sql_lower:
             raise ValueError(f"Forbidden keyword detected : {keyword}")
+
+    for pattern in FORBIDDEN_PATTERNS:
+        if re.search(pattern, sql, flags=re.IGNORECASE):
+            raise ValueError("Unresolved placeholder token detected in SQL.")
 
     return True
