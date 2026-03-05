@@ -1,33 +1,53 @@
 import React, { useState } from "react";
 import { uploadCSV } from "../api/client";
 
-interface Props {
-  onUploadSuccess: (columns: string[]) => void;
-}
-
-const UploadSection = () => {
+const UploadSection: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleUpload = async () => {
-    if (!file) return
+    if (!file) return;
+
+    setIsUploading(true);
+    setError(null);
+    setSuccessMessage(null);
 
     try {
-        const data = await uploadCSV(file) 
-        // onUploadSuccess(data) // data here is the parsed array
-        alert("Upload succesful")
+      await uploadCSV(file);
+      setSuccessMessage("Upload successful. You can now run queries.");
     } catch (err) {
-        alert(`Upload failed ${err}`)
+      const message =
+        err instanceof Error ? err.message : "Upload failed. Please try again.";
+      setError(message);
+    } finally {
+      setIsUploading(false);
     }
-  }
+  };
 
   return (
-    <div>
+    <div style={{ marginBottom: "1.5rem" }}>
       <input
         type="file"
         accept=".csv"
         onChange={(e) => setFile(e.target.files?.[0] || null)}
-      /> {/* ? returns undefined instead of crashing in case of user cancels */}
-      <button onClick={handleUpload}>Upload</button>
+      />
+      <button
+        onClick={handleUpload}
+        disabled={!file || isUploading}
+        style={{ marginLeft: "0.5rem" }}
+      >
+        {isUploading ? "Uploading..." : "Upload"}
+      </button>
+      {error && (
+        <div style={{ color: "red", marginTop: "0.5rem" }}>{error}</div>
+      )}
+      {successMessage && !error && (
+        <div style={{ color: "green", marginTop: "0.5rem" }}>
+          {successMessage}
+        </div>
+      )}
     </div>
   );
 };
