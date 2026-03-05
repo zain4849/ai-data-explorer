@@ -1,6 +1,8 @@
+import type { QueryResponse } from "../types/api";
+
 const BASE_URL = "http://localhost:8000";
 
-export async function uploadCsv(file: File) {
+export async function uploadCSV(file: File) {
   const formData = new FormData();
   formData.append("file", file);
 
@@ -11,10 +13,12 @@ export async function uploadCsv(file: File) {
 
   if (!response.ok) throw new Error("Failed to upload csv file");
 
+  console.log("good so far")
+
   return response.json(); // Will get first 5 records for confirmation
 }
 
-export async function runQuery(query: string) {
+export async function runQuery(query: string): Promise<QueryResponse> {
   const response = await fetch(
     `${BASE_URL}/query?nl_query=${encodeURIComponent(query)}`,
   );
