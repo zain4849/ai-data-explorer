@@ -22,10 +22,6 @@ class UploadResponse(BaseModel):
     columns: List[str]
 
 
-class QueryResultRow(BaseModel):
-    __root__: dict[str, Any]
-
-
 class QueryResponse(BaseModel):
     sql: str
     result: List[dict[str, Any]]
@@ -37,6 +33,13 @@ class ErrorResponse(BaseModel):
     detail: str
     code: str | None = None
     hint: str | None = None
+
+# Pydantic will:
+#   Take your inputs
+#   Validate their types (List[dict[str, Any]], int, List[str])
+#   Convert them if possible
+#   Return an object with these values accessible as attributes.
+#
 
 
 app = FastAPI(title="AI Data Explorer", version="0.1.0")
