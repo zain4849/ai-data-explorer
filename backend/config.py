@@ -32,11 +32,11 @@ class Settings:
 
     # CORS
     cors_origins: List[str] = field(
-        default_factory=lambda: _split_csv_env( # default_factory is a function that returns default value if the environment variable is not set and each time a new instance of the Settings class is created, the default value is returned
+        default_factory=lambda: _split_csv_env(
             "BACKEND_CORS_ORIGINS",
             [
-                "http://127.0.0.1:5174",
-                "http://localhost:5174",
+                "http://127.0.0.1:5173",
+                "http://localhost:5173",
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
             ],
