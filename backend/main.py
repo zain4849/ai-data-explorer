@@ -78,7 +78,7 @@ def health() -> dict[str, Any]:
     }
 
 
-@app.post("/upload_csv", response_model=UploadResponse)
+@app.post("/upload_csv", response_model=UploadResponse) # 2nd arg is optional telling FastAPI to validate the response against the UploadResponse schema
 def upload_csv(file: UploadFile = File(...)):
     logger.info("Received CSV upload: filename=%s", file.filename)
     try:
