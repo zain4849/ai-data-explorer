@@ -1,6 +1,7 @@
 import type { QueryResponse } from "../types/api";
 
-const BASE_URL = "http://localhost:8000";
+const BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
 export async function uploadCSV(file: File) {
   const formData = new FormData();
@@ -26,10 +27,10 @@ export async function runQuery(query: string): Promise<QueryResponse> {
   if (!response.ok) throw new Error("Query failed");
 
   return response.json();
+}
   // {
   //    "sql": sql,
   //    "result": dataframe_to_json_records(df, 50),
   //    "insights": insights,
   //    "chart_html": chart_html
   // }
-}
