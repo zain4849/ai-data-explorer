@@ -26,6 +26,10 @@ SQL_RULES = """
 - Respect column data types.
 - Never compare TEXT/VARCHAR columns directly to numeric literals.
 - Always include a LIMIT clause (e.g. LIMIT 100) unless the user explicitly asks for fewer rows.
+- When a column lists known_values, treat these as the only allowed literal values for that column; do not invent new categorical string values.
+- Prefer using columns whose names closely match the user's request terms instead of inferring from loosely related text columns.
+- Avoid using generic text columns with LIKE '%%...%%' filters when there is already a more specific structured column that represents the same concept.
+- When the user asks for highest/lowest/most/least in terms of a categorical column with known_values, use a CASE expression to define a reasonable ordering over those values based on their semantic intensity.
 
 """
 
