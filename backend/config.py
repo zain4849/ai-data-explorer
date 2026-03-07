@@ -50,9 +50,14 @@ class Settings:
     )
     ollama_model: str = os.getenv("OLLAMA_MODEL_NAME", "phi3")
 
-    # Optional: placeholders for future hosted providers (kept here for clarity).
+    # Groq / OpenAI-compatible hosted providers
     openai_api_key: str | None = os.getenv("OPENAI_API_KEY") or None
     openai_api_base: str | None = os.getenv("OPENAI_API_BASE") or None
+    openai_model: str | None = os.getenv("OPENAI_MODEL") or None
+
+    # Google AI Studio (Gemini)
+    gemini_api_key: str | None = os.getenv("GEMINI_API_KEY") or None
+    gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 
     # Query safety
     default_query_limit: int = int(os.getenv("DEFAULT_QUERY_LIMIT", "100"))
