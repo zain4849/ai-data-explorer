@@ -244,6 +244,9 @@ def call_llm(prompt: str) -> str:
     if provider in {"openai", "openai_compatible", "groq"}:
         return _call_openai_compatible(prompt)
 
+    if provider == "gemini":
+        return _call_gemini(prompt)
+
     raise LLMError(f"Unsupported LLM provider: {settings.llm_provider}")
 
 
