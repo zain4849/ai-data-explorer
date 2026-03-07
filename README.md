@@ -1,6 +1,9 @@
 # AI-powered Data Explorer
 A simple web app to explore CSV data with natural language queries, chart visualization, and data insights.
 
+<img width="2531" height="1190" alt="image" src="https://github.com/user-attachments/assets/d21d84d2-2db1-4fb4-8b54-709f63864a45" />
+
+
 ## Features
 - Upload CSV files through a web interface
 - Execute queries using natural language
