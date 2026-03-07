@@ -56,8 +56,33 @@ app.add_middleware(
 # Convert to object dtype first so None can replace NaN in numeric columns.
 def dataframe_to_json_records(df: pd.DataFrame, limit: int = 5):
     safe_df = df.head(limit).astype(object).where(pd.notna(df.head(limit)), None)
-    return safe_df.to_dict(orient="records")
+    return safe_df.to_dict(orient="records") # An array of dictionaries, each representing a row in the DataFrame.
 
+# FastAPI has special helpers to say where a parameter comes from in the request.
+# File(...) is a helper that says the parameter comes from the request body.
+# Query(...) is a helper that says the parameter comes from the query string.
+# Path(...) is a helper that says the parameter comes from the path.
+# Header(...) is a helper that says the parameter comes from the header.
+# Cookie(...) is a helper that says the parameter comes from the cookie.
+# Body(...) is a helper that says the parameter comes from the body.
+# Form(...) is a helper that says the parameter comes from the form.
+
+# multipart/form-data is an HTTP request format used when a request needs to send multiple pieces of data (fields), especially files.
+# Each piece of data is called a field.
+# Think of it like a form submission split into parts.
+# Simple Idea
+
+# A multipart request looks like:
+
+# request body
+#  ├── field 1
+#  ├── field 2
+#  ├── field 3
+#  └── file
+
+# Each field has:
+# a name
+# a value
 
 @app.get("/health", response_model=dict)
 def health() -> dict[str, Any]:
@@ -79,11 +104,17 @@ def health() -> dict[str, Any]:
 
 
 @app.post("/upload_csv", response_model=UploadResponse) # 2nd arg is optional telling FastAPI to validate the response against the UploadResponse schema
-def upload_csv(file: UploadFile = File(...)):
+def upload_csv(file: UploadFile = File(...)): # UploadFile is the class/type
+    # FastAPI converts the uploaded file into an UploadFile object. See different fields but same idea.
+    # UploadFile(
+    # filename="customers.csv",
+    # content_type="text/csv",
+    # file=<temporary file>
+    # )
     logger.info("Received CSV upload: filename=%s", file.filename)
     try:
         df = pd.read_csv(file.file)
-    except Exception as exc:
+    except Exception as exc: # If raise in here then exception is caught and handled and execution stops here
         logger.error("Failed to read uploaded CSV: %s", exc)
         raise HTTPException(
             status_code=400,
@@ -94,6 +125,9 @@ def upload_csv(file: UploadFile = File(...)):
     db.load_dataframe(df)
 
     preview_records = dataframe_to_json_records(df)
+
+    # jsonable_encoder converts a dictionary to a JSON-encodable format. UploadResponse
+    # For a Pydantic model jsonable_encoder will convert the model to a dictionary and then to a JSON-encodable format.
     response = UploadResponse( # Creates an instance of the UploadResponse class
         preview=preview_records,
         row_count=len(df),
@@ -110,18 +144,18 @@ def query_data(nl_query: str = Query(...)):
     sql = ""
 
     try:
-        sql = generate_sql(nl_query, schema)
+        sql = generate_sql(nl_query, schema) # we use try because generate_sql can raise an LLMError
         logger.info("Generated SQL: %s", sql)
         validate_sql(sql)
         sql = ensure_limit(sql)
         df = db.query(sql)  # df contains the results of the SQL query as a pandas DataFrame
-    except LLMError as llm_error:
+    except LLMError as llm_error: # if generate_sql raises an LLMError, we catch it and raise a HTTPException
         logger.error("LLM error during SQL generation: %s", llm_error)
         raise HTTPException(
             status_code=503,
             detail="The AI query engine is currently unavailable. Please try again.",
         ) from llm_error
-    except Exception as first_error:
+    except Exception as first_error: # if generate_sql raises an exception, we catch it and raise a JSONResponse
         first_error_text = str(first_error)
         logger.warning("Initial SQL failed: %s", first_error_text)
 
@@ -133,7 +167,7 @@ def query_data(nl_query: str = Query(...)):
                     "code": "query_failed",
                 },
             )
-
+        # A second attempt to generate a valid SQL query.
         try:
             repaired_sql = repair_sql(nl_query, schema, sql, first_error_text)
             logger.info("Repaired SQL: %s", repaired_sql)
