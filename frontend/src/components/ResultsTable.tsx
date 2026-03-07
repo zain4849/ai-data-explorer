@@ -1,4 +1,14 @@
 import React from "react";
+import {
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+} from "@mui/material";
 
 interface ResultsTableProps {
   rows: Record<string, unknown>[];
@@ -6,53 +16,63 @@ interface ResultsTableProps {
 
 const ResultsTable: React.FC<ResultsTableProps> = ({ rows }) => {
   if (!rows || rows.length === 0) {
-    return <p>No rows returned for this query.</p>;
+    return (
+      <Typography variant="body2" color="text.secondary">
+        No rows returned for this query.
+      </Typography>
+    );
   }
 
   const columns = Object.keys(rows[0] ?? {});
 
   return (
-    <div style={{ maxHeight: "400px", overflow: "auto", marginTop: "1rem" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
+    <TableContainer
+      component={Paper}
+      elevation={0}
+      sx={{
+        maxHeight: 420,
+        borderRadius: 3,
+        border: "1px solid",
+        borderColor: "divider",
+      }}
+    >
+      <Table stickyHeader size="small">
+        <TableHead>
+          <TableRow>
             {columns.map((col) => (
-              <th
+              <TableCell
                 key={col}
-                style={{
-                  position: "sticky",
-                  top: 0,
-                  background: "#f5f5f5",
-                  textAlign: "left",
-                  padding: "0.5rem",
-                  borderBottom: "1px solid #ddd",
+                sx={{
+                  fontWeight: 700,
+                  bgcolor: "background.paper",
                 }}
               >
                 {col}
-              </th>
+              </TableCell>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHead>
+        <TableBody>
           {rows.map((row, idx) => (
-            <tr key={idx}>
+            <TableRow key={idx} hover>
               {columns.map((col) => (
-                <td
+                <TableCell
                   key={col}
-                  style={{
-                    padding: "0.5rem",
-                    borderBottom: "1px solid #eee",
-                    fontSize: "0.9rem",
+                  sx={{
+                    maxWidth: 240,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                   }}
                 >
                   {String((row as Record<string, unknown>)[col] ?? "")}
-                </td>
+                </TableCell>
               ))}
-            </tr>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
 };
 

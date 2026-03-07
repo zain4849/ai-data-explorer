@@ -1,3 +1,5 @@
+import { Box } from "@mui/material";
+
 interface Props {
   chartHtml: string;
 }
@@ -5,7 +7,16 @@ interface Props {
 const ChartView = ({ chartHtml }: Props) => {
   if (!chartHtml) return null;
 
-  return <div dangerouslySetInnerHTML={{ __html: chartHtml }} />;
+  return (
+    <Box
+      sx={{
+        "& > div": {
+          width: "100%",
+        },
+      }}
+      dangerouslySetInnerHTML={{ __html: chartHtml }}
+    />
+  );
 };
 
 export default ChartView;
