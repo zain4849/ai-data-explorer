@@ -4,16 +4,20 @@ import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import App from "./App.tsx";
 
 const theme = createTheme({
+  // FEFAF6
+  // 
+  //
+  // #2C5001
   palette: {
     mode: "light",
     primary: {
-      main: "#4f46e5",
+      main: "#2C5001",
     },
     secondary: {
       main: "#0ea5e9",
     },
     background: {
-      default: "#f8fafc",
+      default: "#FEFAF6",
       paper: "#ffffff",
     },
   },
