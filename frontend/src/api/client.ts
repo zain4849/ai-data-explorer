@@ -1,9 +1,22 @@
-import type { QueryResponse } from "../types/api";
+import type { QueryResponse, UploadResponse } from "../types/api";
 
 const BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
-export async function uploadCSV(file: File) {
+export async function uploadCSV(file: File): Promise<UploadResponse> {
+  // If customer uploads a file called customers.csv, the file object will look like this:
+  // File {
+  //   name: "customers.csv",
+  //   size: 24,
+  //   type: "text/csv",
+  //   lastModified: 1709650000000,
+  //   lastModifiedDate: Wed Mar 05 2026 12:30:00 GMT+0000,
+  //   webkitRelativePath: ""
+  // }
+  
+  // FormData {
+  //   file: File("data.csv")
+  // }
   const formData = new FormData();
   formData.append("file", file);
 
@@ -16,7 +29,7 @@ export async function uploadCSV(file: File) {
 
   console.log("good so far")
 
-  return response.json(); // Will get first 5 records for confirmation
+  return response.json();
 }
 
 export async function runQuery(query: string): Promise<QueryResponse> {
