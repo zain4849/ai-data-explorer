@@ -7,10 +7,10 @@ interface Props {
 const InsightsPanel = ({ insights }: Props) => {
   if (!insights) return null;
 
-  const items = insights
-    .split(/\n+/)
-    .map((item) => item.replace(/^[\-\*\d\.\s]+/, "").trim())
-    .filter(Boolean);
+  const items = insights // "1. This is a test\n2. So let it begin\n3. Test done"
+    .split(/\n+/) // ["1. This is a test", "2. So let it begin", "3. Test done"]
+    .map((item) => item.replace(/^[\-\*\d\.\s]+/, "").trim()) // ["This is a test", "So let it begin", "Test done"]
+    .filter(Boolean); // ["This is a test", "So let it begin", "Test done"]
 
   return (
     <>
@@ -27,7 +27,7 @@ const InsightsPanel = ({ insights }: Props) => {
         </List>
       ) : (
         <Typography variant="body2" color="text.secondary">
-          {insights}
+          {insights} {/* This is a test - if i recieved insights = "This is a test" */} 
         </Typography>
       )}
     </>

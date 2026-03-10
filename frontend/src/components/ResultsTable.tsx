@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  alpha,
   Paper,
   Table,
   TableBody,
@@ -8,6 +9,7 @@ import {
   TableHead,
   TableRow,
   Typography,
+  useTheme,
 } from "@mui/material";
 
 interface ResultsTableProps {
@@ -15,6 +17,9 @@ interface ResultsTableProps {
 }
 
 const ResultsTable: React.FC<ResultsTableProps> = ({ rows }) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
+
   if (!rows || rows.length === 0) {
     return (
       <Typography variant="body2" color="text.secondary">
@@ -34,6 +39,9 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ rows }) => {
         borderRadius: 3,
         border: "1px solid",
         borderColor: "divider",
+        bgcolor: isDark
+          ? alpha(theme.palette.background.default, 0.44)
+          : theme.palette.background.paper,
       }}
     >
       <Table stickyHeader size="small">
@@ -44,7 +52,9 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ rows }) => {
                 key={col}
                 sx={{
                   fontWeight: 700,
-                  bgcolor: "background.paper",
+                  bgcolor: isDark
+                    ? alpha(theme.palette.background.default, 0.72)
+                    : alpha(theme.palette.primary.light, 0.1),
                 }}
               >
                 {col}
