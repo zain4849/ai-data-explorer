@@ -23,10 +23,14 @@ yarn-error.log
 # IDE
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
 *~
 .DS_Store
+
+# Runtime app state (per-user DuckDB files, uploads)
+.app_state/
 
 # Environment variables
 .env

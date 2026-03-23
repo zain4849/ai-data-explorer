@@ -1,0 +1,45 @@
+# .cursorignore - Blocks files from Cursor indexing and AI context
+
+# --- SECRETS & CREDENTIALS ---
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+secrets.json
+credentials.yml
+id_rsa
+id_rsa.pub
+
+# --- CLOUD & SERVICE ACCOUNTS ---
+.aws/
+.azure/
+gcloud/
+service-account-*.json
+*.tfstate
+*.tfvars
+
+# --- DATABASE FILES ---
+*.db
+*.sqlite
+*.sqlite3
+dump.rdb
+
+# --- LARGE GENERATED FOLDERS ---
+node_modules/
+dist/
+build/
+.next/
+.cache/
+__pycache__/
+venv/
+.venv/
+
+# --- LOGS & TEMPORARY FILES ---
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+.DS_Store

@@ -1,0 +1,47 @@
+[project]
+name = "ai-powered-data-explorer"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--tb=short -q --cov=backend --cov-report=term-missing --cov-fail-under=60"
+
+[tool.coverage.run]
+source = ["backend"]
+omit = ["backend/__pycache__/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+src = ["backend", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "S",    # flake8-bandit (security)
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "S101",  # allow assert in tests
+    "S104",  # allow binding to 0.0.0.0
+    "E501",  # line length handled by formatter
+    "B008",  # FastAPI uses function calls in defaults (File(...), Query(...))
+    "S608",  # SQL injection false positives (we use _quote_ident and validate_sql)
+    "SIM108",  # ternary suggestions are stylistic
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "S106", "B007", "B017"]
+
+[tool.ruff.format]
+quote-style = "double"
