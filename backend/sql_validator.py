@@ -2,7 +2,6 @@ import re
 
 from .config import settings
 
-
 FORBIDDEN_KEYWORDS = [
     "drop",
     "delete",
@@ -56,6 +55,32 @@ def validate_sql(sql: str) -> bool:
             raise ValueError("Unresolved placeholder token detected in SQL.")
 
     return True
+
+
+def fix_phantom_table_data(sql: str, real_tables: list[str]) -> str:
+    """
+    Replace erroneous table references (e.g. 'data', 'death_causes') with the real table
+    when the LLM hallucinates table names not in the schema.
+    """
+    if not real_tables:
+        return sql
+    real_set = {t.lower() for t in real_tables}
+    t = real_tables[0]
+    original = sql
+
+    def replace_table(match: re.Match) -> str:
+        prefix, maybe_table = match.group(1), match.group(2)
+        if maybe_table.lower() not in real_set:
+            return f'{prefix}"{t}"'
+        return match.group(0)
+
+    out = re.sub(r"\b(FROM\s+)([a-zA-Z_][a-zA-Z0-9_]*)\b", replace_table, sql, flags=re.IGNORECASE)
+    out = re.sub(r"\b(JOIN\s+)([a-zA-Z_][a-zA-Z0-9_]*)\b", replace_table, out, flags=re.IGNORECASE)
+    if out != original:
+        from .logger_config import logger
+
+        logger.info("Fixed phantom table reference -> '%s' in SQL", t)
+    return out
 
 
 def ensure_limit(sql: str, default_limit: int | None = None) -> str:
