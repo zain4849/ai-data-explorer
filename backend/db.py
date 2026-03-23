@@ -1,96 +1,144 @@
+"""Per-user file-based DuckDB manager.
+
+Each authenticated user gets their own DuckDB file under .app_state/duckdb/.
+Uploaded datasets persist as named tables across sessions.
+An anonymous fallback (in-memory) is kept for unauthenticated / health-check use.
+"""
+
+import re
+import threading
+from pathlib import Path
+
 import duckdb
 import pandas as pd
 
-class Database:
+from .connectors.file_connector import FileConnector
+
+APP_STATE_DIR = Path(".app_state") # Path(".app_state") creates a Path object pointing to a directory called .app_state in the current working directory. The "." means it's a hidden folder on Unix-like systems (Linux/macOS)
+DUCKDB_DIR = APP_STATE_DIR / "duckdb"
+UPLOADS_DIR = APP_STATE_DIR / "uploads" # UPLOADS_DIR points to .app_state/uploads
+
+# Ensure directories exist at import time
+DUCKDB_DIR.mkdir(parents=True, exist_ok=True)
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+_SAFE_NAME_RE = re.compile(r"[^a-z0-9_]")
+
+
+def sanitize_table_name(filename: str) -> str: # similar to normalize_column_names in dataset_upload.py
+    """Derive a safe DuckDB table name from an uploaded filename."""
+    stem = Path(filename).stem.lower().strip()
+    name = _SAFE_NAME_RE.sub("_", stem)
+    name = re.sub(r"_+", "_", name).strip("_")
+    if not name or name[0].isdigit():
+        name = f"t_{name}"
+    return name[:63]
+
+
+class UserDatabaseManager:
+    """Thread-safe registry of per-user DuckDB connections (file-backed)."""
+
     def __init__(self):
-        self.conn = duckdb.connect(database=':memory:') # In-memory DuckDB
-    
-    def load_dataframe(self, df: pd.DataFrame):
-        # Store in DuckDB, here implicitly creating a table named 'data' is made with the contents of the DataFrame
-        self.conn.execute("CREATE OR REPLACE TABLE data AS SELECT * FROM df")
-        
-    def query(self, sql: str):
-        '''
-        .fetchdf(): This tells DuckDB: "Take those internal results, convert the columns back into Python types, and wrap them in a pd.DataFrame container."
+        self._connections: dict[str, duckdb.DuckDBPyConnection] = {} # [user_id, duckdb.DuckDBPyConnection objects]      
+        self._lock = threading.Lock()
+        # Anonymous in-memory fallback for health checks / unauthenticated access
+        self._anon = duckdb.connect(database=":memory:")
 
-        return: You now have a standard Pandas object that you can use for .head(), .plot(), or further Python analysis.
-        '''
-        clean_sql = sql.strip().rstrip(";").strip()
-        return self.conn.execute(clean_sql).fetchdf()
+    def _db_path(self, user_id: str) -> Path:
+        return DUCKDB_DIR / f"{user_id}.duckdb"
 
-    def _quote_ident(self, ident: str) -> str:
-        # Escape embedded quotes for safe quoted identifiers.
-        safe_ident = ident.replace('"', '""')
-        return f'"{safe_ident}"'
+    def get_connection(self, user_id: str | None) -> duckdb.DuckDBPyConnection:
+        if not user_id:
+            return self._anon
+        with self._lock: # Acquire a lock b4 below code
+            if user_id not in self._connections:
+                self._connections[user_id] = duckdb.connect(
+                    str(self._db_path(user_id))
+                )
+            return self._connections[user_id]
 
-    def get_schema(self):
-        # if I didn't add .fetchall() then result would be a Cursor object (Cursor object does't contain the data, it's a pointer to the data).
-        result = self.conn.execute("PRAGMA table_info(data)").fetchall() # .fetchall() returns a list[tuple(s)]
-        #          cid, name, type, notnull, dflt_value, pk
-        # result = [(0, 'id', 'INTEGER', 0,  None, 1),
-        #           (1, 'username', 'TEXT', 1, None, 0),
-        #           (2, 'age', 'INTEGER', 0, 18, 0), 
-        #           (3, 'status', 'TEXT', 0, None, 0)]
-        columns = [{"name": row[1], "type": row[2]} for row in result]
-        # columns = [{
-        #    "name": "id",
-        #    "type": "INTEGER",
-        # }, {
-        #    "name": "username",
-        #    "type": "TEXT",
-        # }, {
-        #    "name": "age",
-        #    "type": "INTEGER",
-        # }, {
-        #    "name": "status",
-        #    "type": "TEXT",
-        #    "known_values": ["pending", "approved", "rejected"]
-        # }]
-        #
+    def get_connector(self, user_id: str | None) -> FileConnector:
+        return FileConnector(self.get_connection(user_id))
 
-        # Add representative values for low-cardinality text columns to reduce LLM value hallucinations.
-        for col in columns:
-            col_type = col["type"].upper()
-            if "CHAR" not in col_type and "TEXT" not in col_type and "VARCHAR" not in col_type: # only process text cols
-                continue
+    def load_dataframe(
+        self, user_id: str, table_name: str, df: pd.DataFrame
+    ) -> None:
+        conn = self.get_connection(user_id)
+        safe = f'"{table_name}"'
+        conn.execute(f"CREATE OR REPLACE TABLE {safe} AS SELECT * FROM df")
 
-            col_name = col["name"]
-            ident = self._quote_ident(col_name) # ident = '"status"', cuz in PostgreSQL status is keyword
-            distinct_count = self.conn.execute(
-                f"SELECT COUNT(DISTINCT {ident}) FROM data WHERE {ident} IS NOT NULL"
-            ).fetchone()[0] # fetchone() = [(3,)], [0] -> 3
-            # cuz distinct vals are: pending, approved, rejected
+    def query(self, user_id: str | None, sql: str) -> pd.DataFrame:
+        conn = self.get_connection(user_id)
+        return conn.execute(sql.strip().rstrip(";").strip()).fetchdf()
 
-            if distinct_count <= 30:
-                sample_values = self.conn.execute(
-                    f"""
-                    SELECT {ident}
-                    FROM data
-                    WHERE {ident} IS NOT NULL
-                    GROUP BY {ident}
-                    ORDER BY COUNT(*) DESC, {ident}
-                    LIMIT 20
-                    """
-                ).fetchall()
-                # [('pending',), ('approved',), ('rejected',)]
+    def get_tables(self, user_id: str | None) -> list[str]:
+        conn = self.get_connection(user_id)
+        rows = conn.execute(
+            "SELECT table_name FROM information_schema.tables "
+            "WHERE table_schema = 'main'"
+        ).fetchall()
+        return [r[0] for r in rows]
 
-                col["known_values"] = [row[0] for row in sample_values]
-                # new key = 'known_values' & value = ['pending', 'approved', 'rejected']
+    def get_schema(self, user_id: str | None) -> list[dict]:
+        """Return a flat list of column dicts across all of a user's tables."""
+        connector = self.get_connector(user_id)
+        tables = connector.get_tables()
+        all_columns: list[dict] = []
+        for t in tables:
+            for col in connector.get_table_schema(t.name):
+                d = col.to_dict()
+                d["table"] = t.name
+                all_columns.append(d)
+        return all_columns
 
-        # columns = [{
-        #    "name": "id",
-        #    "type": "INTEGER",
-        # }, {
-        #    "name": "username",
-        #    "type": "TEXT",
-        # }, {
-        #    "name": "age",
-        #    "type": "INTEGER",
-        # }, {
-        #    "name": "status",
-        #    "type": "TEXT",
-        #    "known_values": ["pending", "approved", "rejected"]
-        # }]
-        return columns
+    def get_full_schema(self, user_id: str | None) -> list[dict]:
+        """Return per-table schema groups for display / LLM context."""
+        connector = self.get_connector(user_id)
+        tables = connector.get_tables()
+        result = []
+        for t in tables:
+            cols = connector.get_table_schema(t.name)
+            result.append({
+                "table": t.name,
+                "row_count": t.row_count,
+                "columns": [c.to_dict() for c in cols],
+            })
+        return result
 
-db = Database()
+    def close_user(self, user_id: str) -> None:
+        with self._lock:
+            conn = self._connections.pop(user_id, None)
+            if conn:
+                conn.close()
+
+    def uploads_dir_for(self, user_id: str) -> Path:
+        d = UPLOADS_DIR / user_id # d points to .app_state/uploads/123
+        # No directories are created on disk so far (well UPLOADS dir is created above in db.py); these are just Path objects
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+
+
+db_manager = UserDatabaseManager()
+
+
+class Database:
+    """Legacy compatibility wrapper for tests. Uses in-memory DuckDB with table 'data'."""
+    def __init__(self):
+        self._conn = duckdb.connect(database=":memory:")
+
+    def load_dataframe(self, df: pd.DataFrame, table_name: str = "data") -> None:
+        self._conn.execute(f'CREATE OR REPLACE TABLE "{table_name}" AS SELECT * FROM df')
+
+    def query(self, sql: str) -> pd.DataFrame:
+        return self._conn.execute(sql.strip().rstrip(";").strip()).fetchdf()
+
+    def get_schema(self) -> list[dict]:
+        connector = FileConnector(self._conn)
+        tables = connector.get_tables()
+        all_columns: list[dict] = []
+        for t in tables:
+            for col in connector.get_table_schema(t.name):
+                d = col.to_dict()
+                d["table"] = t.name
+                all_columns.append(d)
+        return all_columns
