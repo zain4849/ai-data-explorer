@@ -5,9 +5,10 @@ import MessageBubble from "./MessageBubble";
 
 interface ChatThreadProps {
   messages: ChatMessage[];
+  onSnackbar?: (message: string, severity?: "error" | "success" | "info") => void;
 }
 
-const ChatThread: React.FC<ChatThreadProps> = ({ messages }: ChatThreadProps) => {
+const ChatThreadView: React.FC<ChatThreadProps> = ({ messages, onSnackbar }: ChatThreadProps) => {
   const bottomRef = useRef<HTMLDivElement>(null); // Watch cosden solutions for useRef
 
   useEffect(() => {
@@ -29,11 +30,11 @@ const ChatThread: React.FC<ChatThreadProps> = ({ messages }: ChatThreadProps) =>
       }}
     >
       {messages.map((msg) => (
-        <MessageBubble key={msg.id} message={msg} />
+        <MessageBubble key={msg.id} message={msg} onSnackbar={onSnackbar} />
       ))}
       <div ref={bottomRef} />
     </Box>
   );
 };
 
-export default ChatThread;
+export default ChatThreadView;

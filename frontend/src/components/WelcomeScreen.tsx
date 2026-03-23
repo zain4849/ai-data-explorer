@@ -44,15 +44,15 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           height: 64,
           borderRadius: "18px",
           background: isDark
-            ? "linear-gradient(135deg, #6C9C5E 0%, #BFDDB4 100%)"
-            : "linear-gradient(135deg, #6E9462 0%, #B0CDA4 100%)",
+            ? "linear-gradient(135deg, #333333 0%, #555555 100%)"
+            : "linear-gradient(135deg, #1A1A1A 0%, #404040 100%)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           mb: 3,
           boxShadow: isDark
-            ? "0 18px 40px rgba(0,0,0,0.28)"
-            : "0 18px 36px rgba(110,148,98,0.18)",
+            ? "0 18px 40px rgba(0,0,0,0.5)"
+            : "0 18px 36px rgba(0,0,0,0.12)",
         }}
       >
         <AutoGraphRoundedIcon sx={{ fontSize: 34, color: "#fff" }} />
@@ -108,13 +108,13 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               borderRadius: 3,
               fontSize: "0.95rem",
               background: isDark
-                ? "linear-gradient(135deg, #6C9C5E 0%, #BFDDB4 100%)"
-                : "linear-gradient(135deg, #6E9462 0%, #B0CDA4 100%)",
+                ? "linear-gradient(135deg, #333333 0%, #555555 100%)"
+                : "linear-gradient(135deg, #1A1A1A 0%, #404040 100%)",
               color: "#fff",
               mb: 4,
               boxShadow: isDark
-                ? "0 14px 30px rgba(0,0,0,0.24)"
-                : "0 12px 26px rgba(110,148,98,0.2)",
+                ? "0 14px 30px rgba(0,0,0,0.5)"
+                : "0 12px 26px rgba(0,0,0,0.12)",
             }}
           >
             Upload a dataset

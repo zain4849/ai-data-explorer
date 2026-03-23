@@ -8,6 +8,7 @@ import AIResponseCard from "./AIResponseCard";
 
 interface MessageBubbleProps {
   message: ChatMessage;
+  onSnackbar?: (message: string, severity?: "error" | "success" | "info") => void;
 }
 
 const TypingDots = () => ( // Manually implemented typing dots animation
@@ -32,7 +33,7 @@ const TypingDots = () => ( // Manually implemented typing dots animation
   </Stack>
 );
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onSnackbar }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
   const isUser = message.role === "user";
@@ -104,8 +105,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
               width: 32,
               height: 32,
               background: isDark
-                ? "linear-gradient(135deg, #6C9C5E 0%, #BFDDB4 100%)"
-                : "linear-gradient(135deg, #6E9462 0%, #B0CDA4 100%)",
+                ? "linear-gradient(135deg, #333333 0%, #555555 100%)"
+                : "linear-gradient(135deg, #1A1A1A 0%, #404040 100%)",
               flexShrink: 0,
               mt: 0.3,
             }}
@@ -130,7 +131,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
                 <TypingDots />
               </Box>
             ) : (
-              <AIResponseCard message={message} />
+              <AIResponseCard message={message} onSnackbar={onSnackbar} />
             )}
           </Box>
         </Stack>

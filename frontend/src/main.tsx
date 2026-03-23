@@ -9,6 +9,8 @@ import {
 } from "@mui/material";
 import App from "./App.tsx";
 import ErrorBoundary from "./components/ErrorBoundary.tsx";
+import { AuthProvider, useAuth } from "./context/AuthContext.tsx";
+import LoginPage from "./pages/LoginPage.tsx";
 
 const COLOR_MODE_KEY = "data-explorer-color-mode";
 
@@ -23,17 +25,17 @@ function getInitialMode(): PaletteMode {
 
 function createAppTheme(mode: PaletteMode) {
   const isDark = mode === "dark";
-  const backgroundDefault = isDark ? "#111715" : "#F2F5ED";
-  const backgroundPaper = isDark ? "#18211E" : "#FFFFFF";
-  const surfaceAccent = isDark ? "#22302B" : "#E7EFE0";
-  const primaryMain = isDark ? "#9CC58C" : "#8BB17D";
-  const primaryLight = isDark ? "#C2DDB6" : "#B0CDA4";
-  const primaryDark = isDark ? "#7DAE6B" : "#6E9462";
-  const textPrimary = isDark ? "#EDF4E8" : "#2D3230";
-  const textSecondary = isDark ? "#A5B5A7" : "#7A8B74";
+  const backgroundDefault = isDark ? "#000000" : "#FAFAFA";
+  const backgroundPaper = isDark ? "#0A0A0A" : "#FFFFFF";
+  const surfaceAccent = isDark ? "#141414" : "#F0F0F0";
+  const primaryMain = isDark ? "#D4D4D4" : "#2A2A2A";
+  const primaryLight = isDark ? "#E5E5E5" : "#404040";
+  const primaryDark = isDark ? "#A3A3A3" : "#171717";
+  const textPrimary = isDark ? "#EDEDED" : "#171717";
+  const textSecondary = isDark ? "#737373" : "#525252";
   const divider = isDark
-    ? "rgba(194,221,182,0.12)"
-    : "rgba(45,50,48,0.09)";
+    ? "rgba(255,255,255,0.08)"
+    : "rgba(0,0,0,0.08)";
 
   return createTheme({
     palette: {
@@ -42,10 +44,10 @@ function createAppTheme(mode: PaletteMode) {
         main: primaryMain,
         light: primaryLight,
         dark: primaryDark,
-        contrastText: isDark ? "#102015" : "#2D3230",
+        contrastText: isDark ? "#000000" : "#FFFFFF",
       },
       secondary: {
-        main: isDark ? "#8DA892" : "#7A8B74",
+        main: isDark ? "#A3A3A3" : "#525252",
       },
       background: {
         default: backgroundDefault,
@@ -74,9 +76,16 @@ function createAppTheme(mode: PaletteMode) {
           body: {
             backgroundColor: backgroundDefault,
             backgroundImage: isDark
-              ? "radial-gradient(circle at top, rgba(156,197,140,0.12), transparent 30%)"
-              : "radial-gradient(circle at top, rgba(139,177,125,0.1), transparent 28%)",
+              ? "radial-gradient(ellipse at top, rgba(255,255,255,0.03), transparent 50%)"
+              : "none",
           },
+          "input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active":
+            {
+              WebkitBoxShadow: `0 0 0 100px ${backgroundPaper} inset !important`,
+              WebkitTextFillColor: `${textPrimary} !important`,
+              caretColor: `${textPrimary} !important`,
+              transition: "background-color 5000s ease-in-out 0s",
+            },
         },
       },
       MuiButton: {
@@ -125,13 +134,25 @@ function createAppTheme(mode: PaletteMode) {
             color: textPrimary,
             border: `1px solid ${divider}`,
             boxShadow: isDark
-              ? "0 12px 32px rgba(0,0,0,0.26)"
-              : "0 12px 24px rgba(45,50,48,0.08)",
+              ? "0 12px 32px rgba(0,0,0,0.5)"
+              : "0 12px 24px rgba(0,0,0,0.06)",
           },
         },
       },
     },
   });
+}
+
+function AuthGate({
+  colorMode,
+  onToggleColorMode,
+}: {
+  colorMode: PaletteMode;
+  onToggleColorMode: () => void;
+}) {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <LoginPage />;
+  return <App colorMode={colorMode} onToggleColorMode={onToggleColorMode} />;
 }
 
 function RootApp() {
@@ -150,7 +171,9 @@ function RootApp() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <ErrorBoundary>
-        <App colorMode={mode} onToggleColorMode={toggleColorMode} />
+        <AuthProvider>
+          <AuthGate colorMode={mode} onToggleColorMode={toggleColorMode} />
+        </AuthProvider>
       </ErrorBoundary>
     </ThemeProvider>
   );

@@ -20,13 +20,13 @@ interface ChatInputProps {
   placeholder?: string;
 }
 
-const ChatInput: React.FC<ChatInputProps> = ({
+const ChatInput = ({
   onSend,
   onFileSelect,
   disabled = false,
   isLoading = false,
   placeholder = "Ask a question about your data...",
-}) => {
+}: ChatInputProps) => {
   const [text, setText] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const theme = useTheme();
@@ -38,7 +38,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     onSend(trimmed);
     setText("");
   };
-
+  // I could'nt just skip to handleSend cuz we need to make sure only for Enter key
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
