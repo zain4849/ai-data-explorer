@@ -1,5 +1,4 @@
 import re
-from typing import Tuple
 
 import requests
 
@@ -7,12 +6,15 @@ from .config import settings
 from .logger_config import logger
 
 
-class LLMError(Exception): # LLMError is a subclass of Exception, so it behaves like an exception. No extra code needed.
+class LLMError(
+    Exception
+):  # LLMError is a subclass of Exception, so it behaves like an exception. No extra code needed.
     """Raised when an LLM provider call fails or returns invalid data."""
 
 
-def _get_ollama_config() -> Tuple[str, str]:
+def _get_ollama_config() -> tuple[str, str]:
     return settings.ollama_url, settings.ollama_model
+
 
 SQL_RULES = """
 - Only output valid SQL.
@@ -35,6 +37,7 @@ SQL_RULES = """
 
 """
 
+
 def _call_ollama(prompt: str) -> str:
     url, model = _get_ollama_config()
 
@@ -51,11 +54,13 @@ def _call_ollama(prompt: str) -> str:
     except requests.RequestException as exc:
         # handle network/connection errors: like connection refused, timeout, etc.
         logger.error("LLM request to Ollama failed: %s", exc)
-        raise LLMError("LLM provider is unavailable") from exc # raising an exception stops normal execution flow and propagates the error up the call stack
+        raise LLMError(
+            "LLM provider is unavailable"
+        ) from exc  # raising an exception stops normal execution flow and propagates the error up the call stack
 
     # this line ain't reached if the above exception was raised, but in try/except where no raise is used, the code below would still execute
     if response.status_code != 200:
-        # handle HTTP errors returned by the server: like 404, 500, etc. 
+        # handle HTTP errors returned by the server: like 404, 500, etc.
         logger.error(
             "LLM request failed with status %s: %s",
             response.status_code,
@@ -73,14 +78,14 @@ def _call_ollama(prompt: str) -> str:
         logger.error("Failed to decode LLM JSON response: %s", exc)
         raise LLMError("LLM provider returned invalid JSON") from exc
 
-    content = data.get("response") # content = "SELECT * FROM users WHERE age > 21 LIMIT 100;"
+    content = data.get("response")  # content = "SELECT * FROM users WHERE age > 21 LIMIT 100;"
     if not isinstance(content, str):
         logger.error("LLM response missing 'response' field: %s", data)
         raise LLMError("LLM provider returned an unexpected payload")
 
     text = content.strip()
     logger.info("LLM call succeeded (chars=%d)", len(text))
-    return text # text = "SELECT * FROM users WHERE age > 21 LIMIT 100;"
+    return text  # text = "SELECT * FROM users WHERE age > 21 LIMIT 100;"
 
 
 def _call_openai_compatible(prompt: str, *, base_url: str | None = None, model: str | None = None) -> str:
@@ -173,8 +178,7 @@ def _call_gemini(prompt: str) -> str:
 
     if not api_key:
         raise LLMError(
-            "GEMINI_API_KEY must be set for gemini provider. "
-            "Get a free key at https://aistudio.google.com/app/apikey"
+            "GEMINI_API_KEY must be set for gemini provider. Get a free key at https://aistudio.google.com/app/apikey"
         )
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
@@ -197,12 +201,17 @@ def _call_gemini(prompt: str) -> str:
         raise LLMError("LLM provider is unavailable") from exc
 
     if response.status_code != 200:
+        try:
+            err_json = response.json()
+            msg = err_json.get("error", {}).get("message", response.text[:200])
+        except Exception:
+            msg = response.text[:200] if response.text else "No response body"
         logger.error(
             "Gemini API failed with status %s: %s",
             response.status_code,
             response.text[:800],
         )
-        raise LLMError("LLM provider returned an error response")
+        raise LLMError(f"Gemini API error ({response.status_code}): {msg}")
 
     try:
         data = response.json()
@@ -214,9 +223,7 @@ def _call_gemini(prompt: str) -> str:
         candidates = data.get("candidates", [])
         if not candidates:
             prompt_feedback = data.get("promptFeedback", {})
-            raise LLMError(
-                f"Gemini returned no candidates. {prompt_feedback.get('blockReason', 'Unknown')}"
-            )
+            raise LLMError(f"Gemini returned no candidates. {prompt_feedback.get('blockReason', 'Unknown')}")
         parts = candidates[0].get("content", {}).get("parts", [])
         if not parts:
             raise LLMError("Gemini returned empty content")
@@ -258,6 +265,7 @@ def clean_sql_output(raw_sql: str) -> str:
     sql = re.sub(r"--.*?$", "", sql, flags=re.MULTILINE)
     return sql.strip()
 
+
 def has_unresolved_placeholders(sql: str) -> bool:
     patterns = [
         r"\[[^\]]+\]",
@@ -269,23 +277,28 @@ def has_unresolved_placeholders(sql: str) -> bool:
 
 
 def _build_schema_text(schema_cols: list[dict[str, str]]) -> str:
-    lines = []
+    """Build schema text. When 'table' is present, group columns by table for clarity."""
+    from collections import OrderedDict
+    by_table: OrderedDict[str | None, list[dict]] = OrderedDict()
     for col in schema_cols:
-        known_values = col.get("known_values")
-        if known_values:
-            values_text = ", ".join([repr(value) for value in known_values]) # ["'pending'", "'approved'", "'rejected'"] ", ".join -> "'pending', 'approved', 'rejected'"
-            lines.append(f"- {col['name']} ({col['type']}), known_values: [{values_text}]") # status (TEXT), known_values: ['pending', 'approved', 'rejected']
-        else:
-            lines.append(f"- {col['name']} ({col['type']})")
+        t = col.get("table") if isinstance(col, dict) else None
+        if t not in by_table:
+            by_table[t] = []
+        by_table[t].append(col)
 
-        # lines = [
-        #    "- id (INTEGER)",
-        #    "- username (TEXT)",
-        #    "- age (INTEGER)",
-        #    "- status (TEXT), known_values: ['pending', 'approved', 'rejected']"
-        # ]
-    
-    return "\n".join(lines)
+    lines = []
+    for table_name, cols in by_table.items():
+        if table_name:
+            lines.append(f"\nTable: {table_name}")
+        for col in cols:
+            known_values = col.get("known_values")
+            prefix = "  " if table_name else ""
+            if known_values:
+                values_text = ", ".join([repr(v) for v in known_values])
+                lines.append(f"{prefix}- {col['name']} ({col['type']}), known_values: [{values_text}]")
+            else:
+                lines.append(f"{prefix}- {col['name']} ({col['type']})")
+    return "\n".join(lines).strip()
 
     # - id (INTEGER)
     # - username (TEXT)
@@ -293,14 +306,68 @@ def _build_schema_text(schema_cols: list[dict[str, str]]) -> str:
     # - status (TEXT), known_values: ['pending', 'approved', 'rejected']
 
 
+def _build_multi_table_schema_text(tables: list) -> str:
+    """Build schema text for multi-table contexts using TableInfo objects or dicts."""
+    lines = []
+    for table in tables:
+        if hasattr(table, "qualified_name"):
+            # TableInfo object
+            table_name = table.qualified_name
+            lines.append(f"\nTable: {table_name}")
+            for col in table.columns:
+                extras = []
+                if col.is_pk:
+                    extras.append("PK")
+                if col.fk_reference:
+                    extras.append(f"FK->{col.fk_reference}")
+                if col.known_values:
+                    vals = ", ".join(repr(v) for v in col.known_values)
+                    extras.append(f"known_values: [{vals}]")
+                extra_str = f" [{', '.join(extras)}]" if extras else ""
+                lines.append(f"  - {col.name} ({col.data_type}){extra_str}")
+        elif isinstance(table, dict) and "table_name" in table:
+            # Dict format: {"table_name": "...", "columns": [...]}
+            lines.append(f"\nTable: {table['table_name']}")
+            for col in table.get("columns", []):
+                lines.append(f"  - {col['name']} ({col['type']})")
+    return "\n".join(lines)
 
-def generate_sql(nl_query: str, schema_cols: list[dict[str, str]]) -> str:
-    columns_text = _build_schema_text(schema_cols)
+
+DIALECT_HINTS = {
+    "duckdb": "Use DuckDB SQL syntax.",
+    "postgresql": "Use PostgreSQL syntax. Quote identifiers with double quotes. Use ILIKE for case-insensitive matching.",
+    "mysql": "Use MySQL syntax. Quote identifiers with backticks. Use LIKE for case-insensitive matching (MySQL is case-insensitive by default).",
+    "sqlite": "Use SQLite syntax. Quote identifiers with double quotes. SQLite has limited function support.",
+}
+
+
+def generate_sql(
+    nl_query: str,
+    schema_cols: list[dict[str, str]],
+    dialect: str = "duckdb",
+    tables: list | None = None,
+) -> str:
+    if tables:
+        columns_text = _build_multi_table_schema_text(tables)
+        table_hint = "Use the table names shown above."
+    else:
+        columns_text = _build_schema_text(schema_cols)
+        schema_tables = list(dict.fromkeys(c.get("table") for c in schema_cols if isinstance(c, dict) and c.get("table")))
+        if schema_tables:
+            table_hint = (
+                f"The table name is '{schema_tables[0]}'."
+                if len(schema_tables) == 1
+                else f"Use the table names: {', '.join(repr(t) for t in schema_tables)}."
+            )
+        else:
+            table_hint = "Use the table names shown in the schema."
+    dialect_hint = DIALECT_HINTS.get(dialect, DIALECT_HINTS["duckdb"])
 
     prompt = f"""
-    You convert natural language into DuckDB SQL queries.
-    The table name is 'data'.
-    Available columns and types:
+    You convert natural language into SQL queries.
+    {dialect_hint}
+    {table_hint}
+    Available schema:
     {columns_text}
 
     Rules:
@@ -312,10 +379,10 @@ def generate_sql(nl_query: str, schema_cols: list[dict[str, str]]) -> str:
     sql = clean_sql_output(call_llm(prompt))
     if has_unresolved_placeholders(sql):
         repair_prompt = f"""
-        Rewrite the SQL below into executable DuckDB SQL.
+        Rewrite the SQL below into executable {dialect} SQL.
         Keep intent the same, but remove placeholders and assumptions not present in the request.
-        Table name is 'data'.
-        Available columns and types:
+        {table_hint}
+        Available schema:
         {columns_text}
 
         Rules:
@@ -335,21 +402,39 @@ def repair_sql(
     schema_cols: list[dict[str, str]],
     bad_sql: str,
     db_error: str,
+    dialect: str = "duckdb",
+    tables: list | None = None,
 ) -> str:
-    columns_text = _build_schema_text(schema_cols)
+    if tables:
+        columns_text = _build_multi_table_schema_text(tables)
+        table_hint = "Use the table names shown above."
+    else:
+        columns_text = _build_schema_text(schema_cols)
+        schema_tables = list(dict.fromkeys(c.get("table") for c in schema_cols if isinstance(c, dict) and c.get("table")))
+        if schema_tables:
+            table_hint = (
+                f"The table name is '{schema_tables[0]}'."
+                if len(schema_tables) == 1
+                else f"Use the table names: {', '.join(repr(t) for t in schema_tables)}."
+            )
+        else:
+            table_hint = "Use the table names shown in the schema."
+
+    dialect_hint = DIALECT_HINTS.get(dialect, DIALECT_HINTS["duckdb"])
 
     prompt = f"""
-    Fix this DuckDB SQL so it executes correctly.
-    The table name is 'data'.
-    Available columns and types:
+    Fix this {dialect} SQL so it executes correctly.
+    {dialect_hint}
+    {table_hint}
+    Available schema:
     {columns_text}
 
     User request: {nl_query}
     Broken SQL: {bad_sql}
-    DuckDB error: {db_error}
+    Database error: {db_error}
 
     Fix strategy:
-    - Read the DuckDB error carefully and fix exactly what it complains about.
+    - Read the error carefully and fix exactly what it complains about.
     - If a column is missing from GROUP BY, either add it to GROUP BY or wrap it in an aggregate (e.g. ANY_VALUE, MAX, SUM).
     - If a column doesn't exist, remove it from the query entirely.
     - Simplify the query: remove columns and clauses that are not needed to answer the user's question.
@@ -360,6 +445,7 @@ def repair_sql(
     """
 
     return clean_sql_output(call_llm(prompt))
+
 
 def generate_insights(df_preview: str) -> str:
     prompt = f"""
@@ -372,4 +458,28 @@ def generate_insights(df_preview: str) -> str:
     """
 
     return call_llm(prompt)
-    
+
+
+def explain_result(
+    nl_query: str,
+    sql: str,
+    result_summary: str,
+    chart_type: str | None = None,
+) -> str:
+    """Generate a plain-language explanation of what a query result or chart means."""
+    chart_note = f"\nThe data is visualized as a {chart_type} chart." if chart_type else ""
+
+    prompt = f"""You're a data analyst explaining results to a non-technical user.
+
+User question: {nl_query}
+SQL query used: {sql}
+{chart_note}
+
+Result summary:
+{result_summary}
+
+Provide a clear, plain-language explanation of what this data means.
+Mention key findings, what the numbers represent, and any notable patterns.
+Keep it concise (2-4 sentences).
+"""
+    return call_llm(prompt)

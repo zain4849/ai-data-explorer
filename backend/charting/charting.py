@@ -1,6 +1,7 @@
 import pandas as pd
-from .decision_engine import decide_chart
+
 from .chart_builders import build_chart
+from .decision_engine import decide_chart
 
 
 def generate_chart(df: pd.DataFrame) -> str:
